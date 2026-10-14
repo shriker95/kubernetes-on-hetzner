@@ -30,6 +30,7 @@ PUBLIC_IP=$(curl -sf http://169.254.169.254/hetzner/v1/metadata/public-ipv4 || t
 export INSTALL_K3S_EXEC="server \
   --disable traefik \
   --disable servicelb \
+  --disable local-storage \
   --disable-cloud-controller \
   --kubelet-arg=cloud-provider=external \
   --node-ip=$PRIV_IP \
@@ -52,3 +53,14 @@ export INSTALL_K3S_EXEC="agent \
 %{ endif ~}
 
 curl -sfL https://get.k3s.io | sh -
+
+%{ if role == "server" ~}
+# Der CCM darf NICHT über einen HelmChart-Job installiert werden: Die Helm-Jobs
+# tolerieren den Taint node.cloudprovider.kubernetes.io/uninitialized nicht (Deadlock).
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+until k3s kubectl get nodes >/dev/null 2>&1; do sleep 3; done
+k3s kubectl apply -f "https://github.com/hetznercloud/hcloud-cloud-controller-manager/releases/download/${ccm_version}/ccm.yaml"
+# Netzwerk setzen, damit der CCM die private IP (node-ip) kennt; Routen aus (Flannel).
+k3s kubectl -n kube-system set env deploy/hcloud-cloud-controller-manager \
+  HCLOUD_NETWORK="${network_id}" HCLOUD_NETWORK_ROUTES_ENABLED=false
+%{ endif ~}

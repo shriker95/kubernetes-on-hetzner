@@ -95,10 +95,10 @@ variable "k3s_version" {
   default     = "v1.33.5+k3s1"
 }
 
-variable "ccm_chart_version" {
-  description = "Version des Helm-Charts hcloud-cloud-controller-manager. Leer = neueste."
+variable "ccm_version" {
+  description = "Release-Version des hcloud Cloud Controller Managers (Manifest ccm.yaml aus den GitHub-Releases)."
   type        = string
-  default     = ""
+  default     = "v1.26.0"
 }
 
 variable "csi_chart_version" {

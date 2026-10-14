@@ -71,6 +71,8 @@ locals {
     k3s_version      = var.k3s_version
     k3s_token        = random_password.k3s_token.result
     control_plane_ip = var.control_plane_private_ip
+    network_id       = tostring(hcloud_network.this.id)
+    ccm_version      = var.ccm_version
   }
 
   worker_cloud_init = "#cloud-config\n${yamlencode({
@@ -105,7 +107,6 @@ locals {
     worker_max         = var.worker_max
     worker_server_type = var.worker_server_type
     location           = var.location
-    ccm_version        = var.ccm_chart_version
     csi_version        = var.csi_chart_version
     autoscaler_version = var.autoscaler_chart_version
   })

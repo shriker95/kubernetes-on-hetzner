@@ -26,24 +26,6 @@ stringData:
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
-  name: hcloud-ccm
-  namespace: kube-system
-spec:
-  repo: https://charts.hetzner.cloud
-  chart: hcloud-cloud-controller-manager
-%{ if ccm_version != "" ~}
-  version: "${ccm_version}"
-%{ endif ~}
-  targetNamespace: kube-system
-  valuesContent: |-
-    # Netzwerk-ID kommt aus dem Secret "hcloud" (Key "network").
-    # Routen-Management ist aus: k3s nutzt Flannel (VXLAN) über das private Netz.
-    networking:
-      enabled: false
----
-apiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
   name: hcloud-csi
   namespace: kube-system
 spec:
