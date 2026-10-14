@@ -1,0 +1,74 @@
+# Test: nginx mit Hetzner-Volume (PVC) und Hetzner-LoadBalancer.
+#   kubectl --kubeconfig kubeconfig.yaml apply -f examples/test-deployment.yaml
+#   kubectl --kubeconfig kubeconfig.yaml -n test get pvc,pods,svc
+#   curl http://<EXTERNAL-IP>
+#   kubectl --kubeconfig kubeconfig.yaml delete ns test   # räumt auch Volume und LB auf
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: web-data
+  namespace: test
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: hcloud-volumes
+  resources:
+    requests:
+      storage: 10Gi # Minimum bei Hetzner-Volumes
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: test
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO-Volume kann nur an einem Node hängen
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      initContainers:
+        - name: init-content
+          image: busybox:1.37
+          command: ["sh", "-c", "[ -f /data/index.html ] || echo \"hello from pvc $(date)\" > /data/index.html"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: web-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: test
+  annotations:
+    load-balancer.hetzner.cloud/location: fsn1 # wie var.location
+    load-balancer.hetzner.cloud/use-private-ip: "true" # LB -> Node über privates Netz (NodePorts sind in der Firewall zu)
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 80
